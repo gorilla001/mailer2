@@ -1,0 +1,12 @@
+# tinymailer/mailer build enviroment
+FROM golang:1.6.2
+MAINTAINER Guangzheng Zhang <zhang.elinks@gmail.com>
+WORKDIR /go
+RUN apt-get update && \
+	apt-get -y install unzip && \
+	apt-get clean && \
+	mkdir -p /go/src/golang.org/x/ && \
+	git clone https://github.com/golang/tools/ -b release-branch.go1.6 /go/src/golang.org/x/tools && \
+	go get -u github.com/golang/lint/golint
+ENV PKG=github.com/tinymailer/mailer  SRC_DIR=/src PRODUCT_DIR=/product  IN_CONTAINER=yes
+CMD ["/src/tools/build.sh"]

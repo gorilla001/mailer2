@@ -1,1 +1,13 @@
   - [ ] minimal usable design
+  - [ ] cli
+  - [x] vendor system
+  - [x] Dockerfile for bulid
+  - [x] Dockerfile for product
+  - [x] use sendEmail() to replace simpleSendEmail() with more details to debug on smtp sessions
+  - [x] context
+  - [ ] context timeout
+  - [ ] events system, events broadcast
+  - [ ] ci with integration-test & dind
+  - [ ] log midware with response status
+  - [ ] optmize gc by sync.Pool for frequently created objects
+  - [ ] use sqlite or bdb as storage, so the product image cound be more tiny

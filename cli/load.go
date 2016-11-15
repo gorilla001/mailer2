@@ -1,0 +1,77 @@
+package cli
+
+import (
+	"io/ioutil"
+	"path/filepath"
+	"strings"
+
+	"github.com/codegangsta/cli"
+	"gopkg.in/mgo.v2/bson"
+
+	"github.com/tinymailer/mailer/lib"
+	"github.com/tinymailer/mailer/types"
+)
+
+// Load is exported
+func Load(typ string, c *cli.Context) error {
+	switch typ {
+
+	case "server":
+		server := types.SMTPServer{
+			ID:       bson.NewObjectId(),
+			Host:     c.String("host"),
+			Port:     c.String("port"),
+			AuthUser: c.String("user"),
+			AuthPass: c.String("password"),
+		}
+		return loadServer(server)
+
+	case "recipient":
+		recipient := types.Recipient{
+			ID:     bson.NewObjectId(),
+			Name:   c.String("name"),
+			Emails: strings.Split(c.String("emails"), ","),
+		}
+		return loadRecipient(recipient)
+
+	case "mail":
+		mailbody := c.String("body")
+		if filepath.IsAbs(mailbody) {
+			mailbytes, err := ioutil.ReadFile(mailbody)
+			if err != nil {
+				return err
+			}
+			mailbody = string(mailbytes)
+		}
+		mail := types.Mail{
+			ID:       bson.NewObjectId(),
+			FromName: c.String("from-name"),
+			Subject:  c.String("subject"),
+			Body:     mailbody,
+		}
+		return loadMail(mail)
+	}
+
+	return nil
+}
+
+func loadServer(s types.SMTPServer) error {
+	if err := s.Validate(); err != nil {
+		return err
+	}
+	return lib.AddServer(s)
+}
+
+func loadRecipient(r types.Recipient) error {
+	if err := r.Validate(); err != nil {
+		return err
+	}
+	return lib.AddRecipient(r)
+}
+
+func loadMail(m types.Mail) error {
+	if err := m.Validate(); err != nil {
+		return err
+	}
+	return lib.AddMail(m)
+}

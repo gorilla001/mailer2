@@ -1,0 +1,13 @@
+# tinymailer/mailer product release 
+FROM progrium/busybox
+MAINTAINER Guangzheng Zhang <zhang.elinks@gmail.com>
+RUN mkdir -p /mailer/db && \
+	wget http://123.56.190.40:81/pub/mongo-3.2.9.tgz && \
+	gzip -dc mongo-3.2.9.tgz | tar -x -v -C /mailer && \
+	rm -f mongo-3.2.9.tgz
+WORKDIR /mailer
+ENV DATA_DIR=/mailer/db PATH=$PATH:/mailer/bin
+EXPOSE 27017 80
+VOLUME ["/mailer/db"]
+COPY bundles/latest/mailer tools/init /mailer/bin/
+CMD ["/mailer/bin/init"]
