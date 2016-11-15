@@ -1,10 +1,15 @@
 package lib
 
 import (
+	"encoding/json"
+	"errors"
+	"io"
+
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
 	"github.com/tinymailer/mailer/db"
+	"github.com/tinymailer/mailer/smtp"
 	"github.com/tinymailer/mailer/types"
 )
 
@@ -53,6 +58,79 @@ func GetTaskWrapper(t types.Task) types.TaskWrapper {
 }
 
 // RunTask is exported
-func RunTask(task *types.Task, opts *types.TaskOptions) error {
-	return nil
+func RunTask(task *types.Task, opts *types.TaskOptions) io.ReadCloser {
+	r, w := io.Pipe()
+
+	go func(w io.WriteCloser) {
+		defer w.Close()
+
+		var (
+			err    error
+			sender = json.NewEncoder(w)
+			msg    = types.TaskProgressMsg{}
+		)
+		defer func() {
+			msg.Finish = true
+			if err != nil {
+				msg.Error = err.Error()
+			}
+			sender.Encode(msg)
+		}()
+
+		var (
+			mailTos []string
+			mails   []*types.Mail
+			servers []*types.SMTPServer
+		)
+		mailTos, mails, servers, err = taskPrepare(task)
+		if err != nil {
+			return
+		}
+
+		if len(servers) == 0 {
+			err = errors.New("no avaliable smtp servers")
+			return
+		}
+
+		for _, mailTo := range mailTos {
+			for _, mail := range mails {
+				msg.Detail = map[string]interface{}{"to": mailTo}
+				mailEntry := types.NewMailEntry(mail, servers[0].AuthUser, mailTo, "", servers[0])
+				if err = smtp.SendEmail(mailEntry); err != nil {
+					return
+				}
+				sender.Encode(msg)
+			}
+		}
+
+	}(w)
+
+	return r
+}
+
+func taskPrepare(task *types.Task) ([]string, []*types.Mail, []*types.SMTPServer, error) {
+	rec, err := GetRecipient(task.Recipient)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	mails := make([]*types.Mail, 0)
+	for _, mid := range task.Mails {
+		mail, err := GetMail(mid)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		mails = append(mails, &mail)
+	}
+
+	servers := make([]*types.SMTPServer, 0)
+	for _, sid := range task.Servers {
+		server, err := GetServer(sid)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		servers = append(servers, &server)
+	}
+
+	return rec.Emails, mails, servers, nil
 }

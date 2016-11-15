@@ -1,7 +1,10 @@
 package cli
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/codegangsta/cli"
@@ -71,6 +74,39 @@ func createTask(t types.Task) error {
 }
 
 func runTask(id bson.ObjectId) error {
+	task, err := lib.GetTask(id)
+	if err != nil {
+		return err
+	}
+
+	// TODO
+	// 1. implement task options
+	// 2. dispatch stream to multi handlers
+	stream := lib.RunTask(&task, nil)
+	defer stream.Close()
+
+	var (
+		msg     types.TaskProgressMsg
+		decoder = json.NewDecoder(stream)
+	)
+	for {
+		err = decoder.Decode(&msg)
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("stream decode error %v", err)
+		}
+
+		pretty(msg)
+
+		if msg.Finish {
+			if msg.Error == "" {
+				return nil
+			}
+			return errors.New(msg.Error)
+		}
+	}
 	return nil
 }
 

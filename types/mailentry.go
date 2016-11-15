@@ -53,13 +53,9 @@ func (e *MailEntry) Validate() error {
 }
 
 // NewMailEntry is exported
-func NewMailEntry(from, fromName, to, subject, body, helo string, server *SMTPServer) *MailEntry {
+func NewMailEntry(mail *Mail, from, to, helo string, server *SMTPServer) *MailEntry {
 	return &MailEntry{
-		Mail: &Mail{
-			FromName: fromName,
-			Subject:  subject,
-			Body:     body,
-		},
+		Mail:   mail,
 		From:   from,
 		To:     to,
 		Helo:   helo,

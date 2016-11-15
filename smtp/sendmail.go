@@ -5,43 +5,8 @@ import (
 	"io"
 	"net/smtp"
 
-	log "github.com/Sirupsen/logrus"
-
-	"github.com/tinymailer/mailer/pkg/utils"
 	"github.com/tinymailer/mailer/types"
 )
-
-// SendMail is exported
-func SendMail() {
-	var (
-		entry       *types.MailEntry
-		err         error
-		testContent = `部署准备工作就绪`
-	)
-
-	entry = types.NewMailEntry(
-		types.DefaultSMTPServer.AuthUser, // From
-		`发信人姓名`,                          // FromName
-		"1052257495@qq.com",              // To
-		"部署准备工作",                         // Subject
-		testContent,                      // Body
-		"",                               // Helo
-		types.DefaultSMTPServer,
-	)
-	err = simpleSendEmail(entry)
-	if err != nil {
-		log.Errorf(utils.GBK2UTF8(err.Error()))
-	} else {
-		log.Infoln("succeed")
-	}
-
-	err = sendEmail(entry)
-	if err != nil {
-		log.Errorf(utils.GBK2UTF8(err.Error()))
-	} else {
-		log.Infoln("succeed")
-	}
-}
 
 func simpleSendEmail(e *types.MailEntry) error {
 	var auth smtp.Auth
@@ -63,7 +28,8 @@ func simpleSendEmail(e *types.MailEntry) error {
 	)
 }
 
-func sendEmail(e *types.MailEntry) (err error) {
+// SendEmail is exported
+func SendEmail(e *types.MailEntry) (err error) {
 	var (
 		SMTPAction = "unknown"
 		helo       = "localhost"

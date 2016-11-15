@@ -96,3 +96,10 @@ type TaskWrapper struct {
 type TaskOptions struct {
 	MaxConcurrency int
 }
+
+// TaskProgressMsg is exported
+type TaskProgressMsg struct {
+	Detail map[string]interface{} `json:"message,omitempty"`
+	Finish bool                   `json:"finish"`
+	Error  string                 `json:"error"`
+}

@@ -358,17 +358,6 @@ func main() {
 				},
 			},
 		},
-		cli.Command{
-			Name:  "test",
-			Usage: "run simple test",
-			Action: func(c *cli.Context) {
-				mailercli.RunTest()
-			},
-		},
-	}
-
-	app.Before = func(ctx *cli.Context) error {
-		return nil
 	}
 
 	if err := app.Run(os.Args); err != nil {
