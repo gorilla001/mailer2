@@ -99,7 +99,9 @@ type TaskOptions struct {
 
 // TaskProgressMsg is exported
 type TaskProgressMsg struct {
-	Detail map[string]interface{} `json:"message,omitempty"`
-	Finish bool                   `json:"finish"`
-	Error  string                 `json:"error"`
+	Detail map[string]interface{} `json:"details,omitempty"`
+	Finish bool                   `json:"finish,omitempty"`
+	Succ   int                    `json:"succ,omitempty"`
+	Fail   int                    `json:"fail,omitempty"`
+	Error  string                 `json:"error,omitempty"`
 }

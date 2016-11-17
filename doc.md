@@ -61,4 +61,5 @@ mailer task rm --id=5829b1235cfa91fdfe68bf84
 #### run
 ```bash
 mailer task run --id=582b24a168ec1b13a9000001
+curl -XPATCH http://127.0.0.1/api/task/run?id=582b24a168ec1b13a9000001
 ```

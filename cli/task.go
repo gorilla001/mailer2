@@ -106,6 +106,8 @@ func runTask(id bson.ObjectId) error {
 			}
 			return errors.New(msg.Error)
 		}
+
+		msg = types.TaskProgressMsg{}
 	}
 	return nil
 }

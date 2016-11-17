@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"sync"
 
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -65,12 +66,19 @@ func RunTask(task *types.Task, opts *types.TaskOptions) io.ReadCloser {
 		defer w.Close()
 
 		var (
-			err    error
-			sender = json.NewEncoder(w)
-			msg    = types.TaskProgressMsg{}
+			err     error
+			sender  = json.NewEncoder(w)
+			msg     = types.TaskProgressMsg{}
+			counter struct {
+				sync.Mutex
+				succ int
+				fail int
+			}
 		)
 		defer func() {
 			msg.Finish = true
+			msg.Succ = counter.succ
+			msg.Fail = counter.fail
 			if err != nil {
 				msg.Error = err.Error()
 			}
@@ -92,16 +100,36 @@ func RunTask(task *types.Task, opts *types.TaskOptions) io.ReadCloser {
 			return
 		}
 
+		var (
+			wg     sync.WaitGroup
+			detail = map[string]interface{}{}
+		)
 		for _, mailTo := range mailTos {
 			for _, mail := range mails {
-				msg.Detail = map[string]interface{}{"to": mailTo}
-				mailEntry := types.NewMailEntry(mail, servers[0].AuthUser, mailTo, "", servers[0])
-				if err = smtp.SendEmail(mailEntry); err != nil {
-					return
-				}
-				sender.Encode(msg)
+
+				wg.Add(1)
+				go func(mail *types.Mail) {
+					defer wg.Done()
+
+					detail["to"] = mailTo
+					mailEntry := types.NewMailEntry(mail, servers[0].AuthUser, mailTo, "", servers[0])
+					counter.Lock()
+					if err = smtp.SendEmail(mailEntry); err != nil {
+						detail["err"] = err.Error()
+						counter.fail++
+					} else {
+						counter.succ++
+					}
+					counter.Unlock()
+					msg.Detail = detail
+
+					sender.Encode(msg)
+					msg = types.TaskProgressMsg{} //reset
+				}(mail)
+
 			}
 		}
+		wg.Wait()
 
 	}(w)
 

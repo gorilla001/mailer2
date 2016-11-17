@@ -33,7 +33,7 @@ product: build
 deploy: product
 	mkdir -p $(DEPLOY_DBDIR)
 	docker rm -f $(DEPLOY_NAME) || true
-	docker run --name=$(DEPLOY_NAME) -d -p 80:80 -p 27017:27017 -v $(DEPLOY_DBDIR):/mailer/db  $(PRODUCT_IMG)
+	docker run --name=$(DEPLOY_NAME) --dns=114.114.114.114 -d -p 80:80 -p 27017:27017 -v $(DEPLOY_DBDIR):/mailer/db  $(PRODUCT_IMG)
 
 integration-test: build
 	echo "not implement yet"; exit 1

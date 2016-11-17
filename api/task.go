@@ -2,6 +2,8 @@ package api
 
 import (
 	"encoding/json"
+	"io"
+	"net/http"
 
 	"gopkg.in/mgo.v2/bson"
 
@@ -42,9 +44,13 @@ func rmTask(ctx *context) {
 	ctx.Status(204)
 }
 
-// PATCH /task/run?id=xxx
+// PATCH /task/run?id=xxx&sync=true
 func runTask(ctx *context) {
-	id := ctx.params["id"]
+	var (
+		id = ctx.params["id"]
+		//sync, _ = strconv.ParseBool(params["sync"])
+	)
+
 	if !bson.IsObjectIdHex(id) {
 		ctx.ErrBadRequest(id)
 		return
@@ -57,17 +63,37 @@ func runTask(ctx *context) {
 		return
 	}
 
-	var opts types.TaskOptions
-	if err := json.NewDecoder(ctx.req.Body).Decode(&opts); err != nil {
-		ctx.Error(500, err)
-		return
-	}
+	ctx.res.Header().Set("Content-Type", "application/json")
 
-	if err := lib.RunTask(&task, &opts); err != nil {
-		ctx.Error(500, err)
-		return
+	stream := lib.RunTask(&task, nil)
+	defer stream.Close()
+
+	var (
+		msg     types.TaskProgressMsg
+		decoder = json.NewDecoder(stream)
+		bytes   []byte
+	)
+	for {
+		err = decoder.Decode(&msg)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			msg.Finish = true
+			msg.Error = err.Error()
+		}
+
+		bytes, _ = json.Marshal(msg)
+		bytes = append(bytes, '\r', '\n')
+		ctx.res.Write(bytes)
+		ctx.res.(http.Flusher).Flush()
+
+		if msg.Finish {
+			break
+		}
+
+		msg = types.TaskProgressMsg{}
 	}
-	ctx.Status(202)
 }
 
 // PATCH /task/stop?id=xxx
