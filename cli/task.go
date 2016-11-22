@@ -7,7 +7,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/codegangsta/cli"
+	"github.com/urfave/cli"
 	"gopkg.in/mgo.v2/bson"
 
 	"github.com/tinymailer/mailer/lib"
