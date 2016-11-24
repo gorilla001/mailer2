@@ -46,6 +46,12 @@ var (
 			EnvVar: "LISTEN_ADDR",
 			Value:  ":80",
 		},
+		cli.StringFlag{
+			Name:   "pidfile",
+			Usage:  "Path to use for daemon PID file",
+			EnvVar: "PID_FILE",
+			Value:  "/var/run/mailer.pid",
+		},
 	}
 
 	loadServerFlags = []cli.Flag{
@@ -161,14 +167,23 @@ func main() {
 			Flags:     daemonFlags,
 			Action: func(c *cli.Context) {
 				var (
-					listen = c.String("listen")
+					listen  = c.String("listen")
+					pidfile = c.String("pidfile")
 				)
 				if err := initSetUp(c); err != nil {
 					log.Fatalln(err)
 				}
-				if err := mailercli.Daemon(listen); err != nil {
+				if err := mailercli.Daemon(listen, pidfile); err != nil {
 					log.Fatalln(err)
 				}
+			},
+		},
+		cli.Command{
+			Name:      "version",
+			ShortName: "v",
+			Usage:     "print version",
+			Action: func(c *cli.Context) {
+				version.Version().WriteTo(os.Stdout)
 			},
 		},
 		cli.Command{

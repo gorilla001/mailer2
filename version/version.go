@@ -1,8 +1,15 @@
 package version
 
+import (
+	"runtime"
+
+	"github.com/tinymailer/mailer/types"
+)
+
 var (
-	version   string
-	gitCommit string
+	version   string // set by build LD_FLAGS
+	gitCommit string // set by build LD_FLAGS
+	buildAt   string // set by build LD_FLAGS
 )
 
 // GetVersion is exported
@@ -13,4 +20,16 @@ func GetVersion() string {
 // GetGitCommit is exported
 func GetGitCommit() string {
 	return gitCommit
+}
+
+// Version is exported
+func Version() types.Version {
+	return types.Version{
+		Version:   version,
+		GitCommit: gitCommit,
+		BuildTime: buildAt,
+		GoVersion: runtime.Version(),
+		Os:        runtime.GOOS,
+		Arch:      runtime.GOARCH,
+	}
 }
