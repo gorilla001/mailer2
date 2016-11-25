@@ -10,8 +10,9 @@ import (
 var (
 	// DefaultSendPolicy is exported
 	DefaultSendPolicy = &SendPolicy{
-		MaxRetry:  3,
-		MaxSwitch: 3,
+		MaxConcurrency: 3,
+		MaxRetry:       0,
+		WaitDelay:      10,
 	}
 )
 
@@ -28,18 +29,18 @@ type Task struct {
 	Recipient bson.ObjectId   `bson:"recipient" json:"recipient"`
 	Servers   []bson.ObjectId `bson:"servers" json:"servers"`
 	Mails     []bson.ObjectId `bson:"mails" json:"mails"`
-	Policy    *SendPolicy     `bson:"policy" json:"policy"`
 	Status    string          `bson:"status"  json:"status"`
 }
 
 // SendPolicy is exported
 type SendPolicy struct {
-	MaxRetry  int
-	MaxSwitch int
+	MaxConcurrency uint `json:"max_concurrency"`
+	MaxRetry       uint `json:"max_retry"`
+	WaitDelay      uint `json:"wait_delay"`
 }
 
 // NewTask is exported
-func NewTask(recipient string, servers, mails []string, policy *SendPolicy) (Task, error) {
+func NewTask(recipient string, servers, mails []string) (Task, error) {
 	task := Task{
 		Status: StatusCreated,
 	}
@@ -63,10 +64,6 @@ func NewTask(recipient string, servers, mails []string, policy *SendPolicy) (Tas
 		task.Mails = append(task.Mails, bson.ObjectIdHex(m))
 	}
 
-	if policy == nil {
-		task.Policy = DefaultSendPolicy
-	}
-
 	return task, nil
 }
 
@@ -78,30 +75,22 @@ func (t Task) Validate() error {
 	if len(t.Mails) == 0 {
 		return errors.New("mails required")
 	}
-	return t.Policy.validate()
-}
-
-func (p SendPolicy) validate() error {
 	return nil
 }
 
 // TaskWrapper is for easily readable
 type TaskWrapper struct {
 	Task
-	RecipientName string
-	ServerNames   []string
-}
-
-// TaskOptions is exported
-type TaskOptions struct {
-	MaxConcurrency int
+	RecipientName string   `json:"recipient_name"`
+	ServerNames   []string `json:"server_names"`
 }
 
 // TaskProgressMsg is exported
 type TaskProgressMsg struct {
-	Detail map[string]interface{} `json:"details,omitempty"`
-	Finish bool                   `json:"finish,omitempty"`
-	Succ   int                    `json:"succ,omitempty"`
-	Fail   int                    `json:"fail,omitempty"`
-	Error  string                 `json:"error,omitempty"`
+	Detail  map[string]interface{} `json:"details,omitempty"` // progress details of per task
+	Finish  bool                   `json:"finish,omitempty"`  // final(only) finished
+	Succ    int                    `json:"succ,omitempty"`    // final succ counter if finished = true, otherwise halfway
+	Fail    int                    `json:"fail,omitempty"`    // final fail counter if finished = true, otherwise halfway
+	Error   string                 `json:"error,omitempty"`   // final(only) error message
+	Elapsed string                 `json:"elapsed,omitempty"` // final(only) elapsed time
 }

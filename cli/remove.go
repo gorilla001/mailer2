@@ -11,7 +11,14 @@ import (
 )
 
 // Remove is exported
-func Remove(typ string, c *cli.Context) error {
+func Remove(typ string, c *cli.Context) (err error) {
+
+	defer func() {
+		if err == nil {
+			os.Stdout.WriteString("+OK\r\n")
+		}
+	}()
+
 	id := c.String("id")
 	if !bson.IsObjectIdHex(id) {
 		return fmt.Errorf("(%s) not a valid bson id", id)
@@ -31,28 +38,13 @@ func Remove(typ string, c *cli.Context) error {
 }
 
 func removeServer(id bson.ObjectId) error {
-	err := lib.DelServer(id)
-	if err != nil {
-		return err
-	}
-	os.Stdout.WriteString("OK\r\n")
-	return nil
+	return lib.DelServer(id)
 }
 
 func removeRecipient(id bson.ObjectId) error {
-	err := lib.DelRecipient(id)
-	if err != nil {
-		return err
-	}
-	os.Stdout.WriteString("OK\r\n")
-	return nil
+	return lib.DelRecipient(id)
 }
 
 func removeMail(id bson.ObjectId) error {
-	err := lib.DelMail(id)
-	if err != nil {
-		return err
-	}
-	os.Stdout.WriteString("OK\r\n")
-	return nil
+	return lib.DelMail(id)
 }

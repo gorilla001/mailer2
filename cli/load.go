@@ -1,8 +1,7 @@
 package cli
 
 import (
-	"io/ioutil"
-	"path/filepath"
+	"os"
 	"strings"
 
 	"github.com/urfave/cli"
@@ -13,7 +12,14 @@ import (
 )
 
 // Load is exported
-func Load(typ string, c *cli.Context) error {
+func Load(typ string, c *cli.Context) (err error) {
+
+	defer func() {
+		if err == nil {
+			os.Stdout.WriteString("+OK\r\n")
+		}
+	}()
+
 	switch typ {
 
 	case "server":
@@ -27,21 +33,22 @@ func Load(typ string, c *cli.Context) error {
 		return loadServer(server)
 
 	case "recipient":
+		emails, err := contentFromFileOrCLI(c.String("emails"))
+		if err != nil {
+			return err
+		}
+		emails = strings.Replace(emails, "\n", ",", -1)
 		recipient := types.Recipient{
 			ID:     bson.NewObjectId(),
 			Name:   c.String("name"),
-			Emails: strings.Split(c.String("emails"), ","),
+			Emails: strings.Split(emails, ","),
 		}
 		return loadRecipient(recipient)
 
 	case "mail":
-		mailbody := c.String("body")
-		if filepath.IsAbs(mailbody) {
-			mailbytes, err := ioutil.ReadFile(mailbody)
-			if err != nil {
-				return err
-			}
-			mailbody = string(mailbytes)
+		mailbody, err := contentFromFileOrCLI(c.String("body"))
+		if err != nil {
+			return err
 		}
 		mail := types.Mail{
 			ID:       bson.NewObjectId(),

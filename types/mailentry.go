@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/base64"
 	"errors"
+	"mime"
 	"net/mail"
-	"strings"
 
 	"gopkg.in/mgo.v2/bson"
 )
@@ -87,7 +87,7 @@ func (e *MailEntry) headerString() string {
 func (e *MailEntry) headerMap() map[string]string {
 	addr := mail.Address{e.FromName, e.From}
 	return map[string]string{
-		"From":                      addr.String(),
+		"From":                      addr.String(), // -> "name" <xx@yy.zz>
 		"To":                        e.To,
 		"Reply-To":                  e.From,
 		"Subject":                   encodeRFC2047(e.Subject),
@@ -98,8 +98,7 @@ func (e *MailEntry) headerMap() map[string]string {
 }
 
 // use mail's rfc2047 to encode any string
-// See: https://godoc.org/net/mail#Address
+// See: https://godoc.org/mime#pkg-constants
 func encodeRFC2047(s string) string {
-	addr := mail.Address{s, ""}
-	return strings.Trim(addr.String(), " <>")
+	return mime.QEncoding.Encode("utf-8", s)
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/urfave/cli"
@@ -23,7 +24,6 @@ func Task(typ string, c *cli.Context) error {
 			c.String("recipient"),
 			strings.Split(c.String("servers"), ","),
 			strings.Split(c.String("mails"), ","),
-			nil,
 		)
 		if err != nil {
 			return err
@@ -70,7 +70,11 @@ func createTask(t types.Task) error {
 	if err := t.Validate(); err != nil {
 		return err
 	}
-	return lib.AddTask(t)
+	if err := lib.AddTask(t); err != nil {
+		return err
+	}
+	os.Stdout.WriteString("+OK\r\n")
+	return nil
 }
 
 func runTask(id bson.ObjectId) error {
@@ -136,7 +140,11 @@ func rmTask(id bson.ObjectId) error {
 	if err := stopTask(id); err != nil {
 		return err
 	}
-	return lib.DelTask(id)
+	if err := lib.DelTask(id); err != nil {
+		return err
+	}
+	os.Stdout.WriteString("+OK\r\n")
+	return nil
 }
 
 func bsonID(c *cli.Context) (bson.ObjectId, error) {

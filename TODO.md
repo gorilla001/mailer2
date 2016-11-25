@@ -11,3 +11,13 @@
   - [ ] log midware with response status
   - [ ] optmize gc by sync.Pool for frequently created objects
   - [ ] use sqlite or bdb as storage, so the product image cound be more tiny
+  - [x] failure switch policy
+  - [x] run send task with progress ouptut
+  - [ ] smtp auth ping on prepare, sort by speed
+  - [ ] task audit log, dispatch stream log
+  - [ ] check if connected on resource removal
+  - [ ] complete http api
+  - [ ] http mux package support path params
+  - [ ] http mux package support subdirectory & directory midware
+  - [ ] pid file
+  - [ ] cli to remove all

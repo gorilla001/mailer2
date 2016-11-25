@@ -27,7 +27,7 @@ var (
 		},
 		cli.StringFlag{
 			Name:   "dburl",
-			Usage:  "The connection URL of mongodb server. eg: mongodb://127.0.0.1:27017",
+			Usage:  "The connection URL of mongodb server",
 			Value:  "mongodb://127.0.0.1:27017/",
 			EnvVar: "DB_URL",
 		},
@@ -104,6 +104,10 @@ var (
 			Name:  "id",
 			Usage: "bson id for the to be removed object",
 		},
+		cli.BoolFlag{
+			Name:  "all",
+			Usage: "remove all objects of given resource",
+		},
 	}
 
 	taskCreateFlags = []cli.Flag{
@@ -150,7 +154,7 @@ func main() {
 			debug = c.Bool("debug")
 		)
 
-		log.SetFormatter(&log.JSONFormatter{})
+		log.SetFormatter(&log.TextFormatter{})
 		log.SetLevel(log.InfoLevel)
 		if debug {
 			log.SetLevel(log.DebugLevel)
@@ -166,6 +170,8 @@ func main() {
 			Usage:     "start the mailer daemon",
 			Flags:     daemonFlags,
 			Action: func(c *cli.Context) {
+				log.SetFormatter(&log.JSONFormatter{})
+
 				var (
 					listen  = c.String("listen")
 					pidfile = c.String("pidfile")

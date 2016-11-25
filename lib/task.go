@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"math/rand"
 	"sync"
+	"time"
 
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -12,6 +14,12 @@ import (
 	"github.com/tinymailer/mailer/db"
 	"github.com/tinymailer/mailer/smtp"
 	"github.com/tinymailer/mailer/types"
+)
+
+var (
+	errNoRecipient = errors.New("no recipient addresses to be sent")
+	errNoMail      = errors.New("no email contents to be sent")
+	errNoServer    = errors.New("no avaliable smtp servers")
 )
 
 // AddTask is exported
@@ -59,7 +67,7 @@ func GetTaskWrapper(t types.Task) types.TaskWrapper {
 }
 
 // RunTask is exported
-func RunTask(task *types.Task, opts *types.TaskOptions) io.ReadCloser {
+func RunTask(task *types.Task, policy *types.SendPolicy) io.ReadCloser {
 	r, w := io.Pipe()
 
 	go func(w io.WriteCloser) {
@@ -68,7 +76,7 @@ func RunTask(task *types.Task, opts *types.TaskOptions) io.ReadCloser {
 		var (
 			err     error
 			sender  = json.NewEncoder(w)
-			msg     = types.TaskProgressMsg{}
+			startAt = time.Now()
 			counter struct {
 				sync.Mutex
 				succ int
@@ -76,9 +84,12 @@ func RunTask(task *types.Task, opts *types.TaskOptions) io.ReadCloser {
 			}
 		)
 		defer func() {
-			msg.Finish = true
-			msg.Succ = counter.succ
-			msg.Fail = counter.fail
+			msg := types.TaskProgressMsg{
+				Finish:  true,
+				Succ:    counter.succ,
+				Fail:    counter.fail,
+				Elapsed: time.Now().Sub(startAt).String(),
+			}
 			if err != nil {
 				msg.Error = err.Error()
 			}
@@ -88,45 +99,115 @@ func RunTask(task *types.Task, opts *types.TaskOptions) io.ReadCloser {
 		var (
 			mailTos []string
 			mails   []*types.Mail
-			servers []*types.SMTPServer
+			sg      *serverGroup
+			total   int
 		)
-		mailTos, mails, servers, err = taskPrepare(task)
+		// default policy
+		if policy == nil {
+			policy = types.DefaultSendPolicy
+		}
+		// prepare
+		mailTos, mails, sg, err = taskPrepare(task, policy)
 		if err != nil {
 			return
 		}
-
-		if len(servers) == 0 {
-			err = errors.New("no avaliable smtp servers")
-			return
+		// disable failure retry if we have only one server avaliable
+		if sg.size() == 1 {
+			policy.MaxRetry = 0
 		}
 
-		var (
-			wg     sync.WaitGroup
-			detail = map[string]interface{}{}
-		)
+		// nb of max worker tokens for concurrency
+		tokens := make(chan struct{}, policy.MaxConcurrency)
+
+		// seed the random source
+		rand.Seed(time.Now().UnixNano())
+
+		var wg sync.WaitGroup
+		total = len(mails) * len(mailTos)
+		wg.Add(total)
 		for _, mailTo := range mailTos {
 			for _, mail := range mails {
+				// take a token to start up a new worker
+				// hang blocked if channel already full
+				tokens <- struct{}{}
 
-				wg.Add(1)
-				go func(mail *types.Mail) {
+				go func(mailTo string, mail *types.Mail) {
+					// randomize sleep [0-1]s to smooth smtp sever load
+					// especially while `policy.MaxConcurrency` pretty large
+					time.Sleep(time.Millisecond * time.Duration(100*(rand.Int()%10+1)))
+
+					// release token on finished
 					defer wg.Done()
+					defer func() {
+						// wait delay
+						time.Sleep(time.Second * time.Duration(policy.WaitDelay))
+						// release a token back while the worker finished
+						<-tokens
+					}()
 
-					detail["to"] = mailTo
-					mailEntry := types.NewMailEntry(mail, servers[0].AuthUser, mailTo, "", servers[0])
-					counter.Lock()
-					if err = smtp.SendEmail(mailEntry); err != nil {
-						detail["err"] = err.Error()
-						counter.fail++
-					} else {
-						counter.succ++
+					var (
+						err      error
+						server   = sg.next()
+						fromUser = server.AuthUser
+						startAt  = time.Now()
+						detail   = map[string]interface{}{
+							"mail_to":      mailTo,
+							"mail_id":      mail.ID.Hex(),
+							"smtp_server":  server.ID.Hex(),
+							"start_at":     startAt,
+							"server_ranks": sg.stats(),
+						}
+					)
+
+					// set elapsed, errmsg, counters on finished
+					defer func() {
+						var nsucc, nfail int
+						detail["time_elapsed"] = time.Now().Sub(startAt).String()
+						counter.Lock()
+						if err != nil {
+							counter.fail++
+							detail["error"] = err.Error()
+						} else {
+							counter.succ++
+						}
+						nsucc, nfail = counter.succ, counter.fail
+						counter.Unlock()
+						sender.Encode(types.TaskProgressMsg{
+							Detail: detail,
+							Succ:   nsucc,
+							Fail:   nfail,
+						})
+					}()
+
+					// now, time to send our pretty!
+					sender.Encode(types.TaskProgressMsg{
+						Detail: detail,
+					})
+					mailEntry := types.NewMailEntry(mail, fromUser, mailTo, "", server)
+					err = smtp.SendEmail(mailEntry)
+
+					// upgrade current smtp server and return
+					if err == nil {
+						sg.upgrade(server.ID)
+						return
 					}
-					counter.Unlock()
-					msg.Detail = detail
 
-					sender.Encode(msg)
-					msg = types.TaskProgressMsg{} //reset
-				}(mail)
+					// downgrade current smtp server
+					if err != nil {
+						sg.downgrade(server.ID)
+					}
 
+					// switch server and retry
+					// note: we don't upgrade/downgrae on smtp server while retry
+					for i := uint(1); i <= policy.MaxRetry; i++ {
+						mailEntry.SwitchServer(sg.next())
+						err = smtp.SendEmail(mailEntry)
+						if err == nil {
+							break
+						}
+					}
+
+				}(mailTo, mail)
 			}
 		}
 		wg.Wait()
@@ -136,10 +217,13 @@ func RunTask(task *types.Task, opts *types.TaskOptions) io.ReadCloser {
 	return r
 }
 
-func taskPrepare(task *types.Task) ([]string, []*types.Mail, []*types.SMTPServer, error) {
+func taskPrepare(task *types.Task, policy *types.SendPolicy) ([]string, []*types.Mail, *serverGroup, error) {
 	rec, err := GetRecipient(task.Recipient)
 	if err != nil {
 		return nil, nil, nil, err
+	}
+	if len(rec.Emails) == 0 {
+		return nil, nil, nil, errNoRecipient
 	}
 
 	mails := make([]*types.Mail, 0)
@@ -149,6 +233,9 @@ func taskPrepare(task *types.Task) ([]string, []*types.Mail, []*types.SMTPServer
 			return nil, nil, nil, err
 		}
 		mails = append(mails, &mail)
+	}
+	if len(mails) == 0 {
+		return nil, nil, nil, errNoMail
 	}
 
 	servers := make([]*types.SMTPServer, 0)
@@ -160,5 +247,10 @@ func taskPrepare(task *types.Task) ([]string, []*types.Mail, []*types.SMTPServer
 		servers = append(servers, &server)
 	}
 
-	return rec.Emails, mails, servers, nil
+	sg := newServerGroup(servers)
+	if sg.empty() {
+		return nil, nil, nil, errNoServer
+	}
+
+	return rec.Emails, mails, sg, nil
 }
