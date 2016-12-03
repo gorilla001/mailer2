@@ -67,13 +67,6 @@ if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
 fi
 BUILDAT=$(date +%F_%T-%Z)
 
-#go build -a -installsuffix cgo -ldflags="-X main.buildVersion 0.14.0 \
-#47             -X main.buildRevision $(git rev-parse --short HEAD) \
-#48             -X main.buildBranch master \
-#49             -X main.buildUser mountkin@gmail.com \
-#50             -X main.buildDate '$(date)' \
-#51             -X main.goVersion 1.4.1 -w"  \
-
 # time to build
 LD_FLAGS="-X $PKG/version.version=$VERSION -X $PKG/version.gitCommit=$GIT_COMMIT -X $PKG/version.buildAt=$BUILDAT -w"
 DstFile="${PRODUCT_DIR}/mailer-${VERSION}-${GIT_COMMIT}"
