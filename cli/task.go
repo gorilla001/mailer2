@@ -36,7 +36,12 @@ func Task(typ string, c *cli.Context) error {
 		if err != nil {
 			return err
 		}
-		return runTask(bid)
+		policy := types.NewSendPolicy(
+			c.Uint("max-concurrency"),
+			c.Uint("max-retry"),
+			c.Uint("wait-delay"),
+		)
+		return runTask(bid, policy)
 
 	case "show":
 		bid, _ := bsonID(c)
@@ -78,16 +83,14 @@ func createTask(t types.Task) error {
 	return nil
 }
 
-func runTask(id bson.ObjectId) error {
+func runTask(id bson.ObjectId, policy *types.SendPolicy) error {
 	task, err := lib.GetTask(id)
 	if err != nil {
 		return err
 	}
 
-	// TODO
-	// 1. implement task options
-	// 2. dispatch stream to multi handlers
-	stream := lib.RunTask(&task, nil)
+	// TODO dispatch stream to a broadcaster which can be subcribe by multi clients
+	stream := lib.RunTask(&task, policy)
 	defer stream.Close()
 
 	var (

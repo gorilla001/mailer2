@@ -41,6 +41,7 @@ mailer task show
 mailer task show   --id=5829b1235cfa91fdfe68bf84
 mailer task create --recipient=5828881368ec1b650b000001 --servers=5828849468ec1b62ef000001,5828879568ec1b6499000001 --mails=582889b568ec1b6b58000001
 mailer task run    --id=582b24a168ec1b13a9000001
+mailer task run    --id=582b24a168ec1b13a9000001 --max-concurrency=10 --max-retry=1 --wait-delay=10
 mailer task rm     --id=5829b1235cfa91fdfe68bf84
 ```
 

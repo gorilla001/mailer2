@@ -131,16 +131,37 @@ var (
 			Usage: "bson ids of mail (split by ,)",
 		},
 	}
+
 	taskRunFlags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "id",
 			Usage: "bson id for the specified task",
 		},
+		cli.UintFlag{
+			Name:  "max-concurrency",
+			Usage: "maximize concurrency number of send job",
+			Value: 3,
+		},
+		cli.UintFlag{
+			Name:  "max-retry",
+			Usage: "maximize retry number while a send job failed",
+			Value: 1,
+		},
+		cli.UintFlag{
+			Name:  "wait-delay",
+			Usage: "seconds to delay before a send job finished",
+			Value: 10,
+		},
 	}
-	taskShowFlags   = taskRunFlags
-	taskFollowFlags = taskRunFlags
-	taskStopFlags   = taskRunFlags
-	taskRemoveFlags = taskRunFlags
+	taskShowFlags = []cli.Flag{
+		cli.StringFlag{
+			Name:  "id",
+			Usage: "bson id for the specified task",
+		},
+	}
+	taskRemoveFlags = taskShowFlags
+	taskFollowFlags = taskShowFlags
+	taskStopFlags   = taskShowFlags
 )
 
 func main() {

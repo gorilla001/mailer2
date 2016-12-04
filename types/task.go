@@ -39,6 +39,11 @@ type SendPolicy struct {
 	WaitDelay      uint `json:"wait_delay"`
 }
 
+// NewSendPolicy is exported
+func NewSendPolicy(c, r, w uint) *SendPolicy {
+	return &SendPolicy{c, r, w}
+}
+
 // NewTask is exported
 func NewTask(recipient string, servers, mails []string) (Task, error) {
 	task := Task{
