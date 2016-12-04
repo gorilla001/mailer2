@@ -37,7 +37,10 @@ func Load(typ string, c *cli.Context) (err error) {
 		if err != nil {
 			return err
 		}
-		emails = strings.Replace(emails, "\n", ",", -1)
+		emails = strings.NewReplacer([]string{
+			"\n", ",",
+			" ", ",",
+		}...).Replace(emails)
 		recipient := types.Recipient{
 			ID:     bson.NewObjectId(),
 			Name:   c.String("name"),
