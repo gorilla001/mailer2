@@ -1,0 +1,5 @@
+#!/bin/sh
+
+/mailer/bin/mongod --dbpath=/mailer/db --logpath=/mailer/db/mongodb.log --logappend &
+sleep 3
+exec /mailer/bin/mailer daemon

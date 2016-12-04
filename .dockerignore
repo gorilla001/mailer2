@@ -1,0 +1,4 @@
+# ignore bundles/* except the latest binary 
+# for the product image building
+bundles/*
+!bundles/latest/mailer
