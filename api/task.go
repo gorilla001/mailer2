@@ -54,12 +54,19 @@ func rmTask(ctx *context) {
 	ctx.Status(204)
 }
 
-// PATCH /task/run?id=xxx&sync=true
+// PATCH /task/run?id=xxx
 func runTask(ctx *context) {
 	var (
 		id = ctx.params["id"]
 		//sync, _ = strconv.ParseBool(params["sync"])
 	)
+
+	var policy *types.SendPolicy
+	err := json.NewDecoder(ctx.req.Body).Decode(policy)
+	if err != nil && err != io.EOF {
+		ctx.ErrBadRequest(err)
+		return
+	}
 
 	if !bson.IsObjectIdHex(id) {
 		ctx.ErrBadRequest(id)
@@ -75,7 +82,7 @@ func runTask(ctx *context) {
 
 	ctx.res.Header().Set("Content-Type", "application/json")
 
-	stream := lib.RunTask(&task, nil)
+	stream := lib.RunTask(&task, policy)
 	defer stream.Close()
 
 	var (
