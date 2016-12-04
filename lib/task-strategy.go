@@ -4,6 +4,7 @@ import (
 	"math"
 	"math/rand"
 	"sync"
+	"time"
 
 	"gopkg.in/mgo.v2/bson"
 
@@ -56,6 +57,7 @@ func (sg serverGroup) stats() map[string]interface{} {
 func (sg serverGroup) next() *types.SMTPServer {
 	sg.mux.RLock()
 	defer sg.mux.RUnlock()
+	rand.Seed(time.Now().UnixNano())
 	var (
 		r = uint64(rand.Int63n(int64(sg.rankSum())))
 		n = uint64(0)
@@ -79,18 +81,22 @@ func (sg serverGroup) rankSum() uint64 {
 
 func (sg serverGroup) upgrade(id bson.ObjectId) {
 	sg.mux.Lock()
-	if v, ok := sg.pools[id]; ok && v.rank < math.MaxUint64 {
-		sg.pools[id].rank++
+	if v, ok := sg.pools[id]; ok {
 		sg.pools[id].positive++
+		if v.rank < math.MaxUint64 { // rank maximize is math.MaxUint64
+			sg.pools[id].rank++
+		}
 	}
 	sg.mux.Unlock()
 }
 
 func (sg serverGroup) downgrade(id bson.ObjectId) {
 	sg.mux.Lock()
-	if v, ok := sg.pools[id]; ok && v.rank > 1 { // rank minimal is 1
-		sg.pools[id].rank--
+	if v, ok := sg.pools[id]; ok {
 		sg.pools[id].negative++
+		if v.rank > 1 { // rank minimal is 1
+			sg.pools[id].rank--
+		}
 	}
 	sg.mux.Unlock()
 }

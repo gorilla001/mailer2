@@ -62,7 +62,7 @@ func runTask(ctx *context) {
 	)
 
 	var policy *types.SendPolicy
-	err := json.NewDecoder(ctx.req.Body).Decode(policy)
+	err := json.NewDecoder(ctx.req.Body).Decode(&policy)
 	if err != nil && err != io.EOF {
 		ctx.ErrBadRequest(err)
 		return
