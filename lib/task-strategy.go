@@ -88,7 +88,7 @@ func (sg serverGroup) upgrade(id bson.ObjectId) {
 
 func (sg serverGroup) downgrade(id bson.ObjectId) {
 	sg.mux.Lock()
-	if v, ok := sg.pools[id]; ok && v.rank > 0 {
+	if v, ok := sg.pools[id]; ok && v.rank > 1 { // rank minimal is 1
 		sg.pools[id].rank--
 		sg.pools[id].negative++
 	}
