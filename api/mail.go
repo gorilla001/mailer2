@@ -8,15 +8,24 @@ import (
 
 // GET /mail?id=xxx
 func getMail(ctx *context) {
-	if ctx.params["id"] == "" {
-		ss, err := lib.ListMail()
+	id := ctx.params["id"]
+	if !bson.IsObjectIdHex(id) {
+		ms, err := lib.ListMail()
 		if err != nil {
 			ctx.Error(500, err)
 			return
 		}
-		ctx.JSON(200, ss)
+		ctx.JSON(200, ms)
 		return
 	}
+
+	bid := bson.ObjectIdHex(id)
+	m, err := lib.GetMail(bid)
+	if err != nil {
+		ctx.Error(500, err)
+		return
+	}
+	ctx.JSON(200, m)
 }
 
 // DELETE /mail?id=xxx

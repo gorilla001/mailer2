@@ -8,7 +8,8 @@ import (
 
 // GET /server?id=xxx
 func getServer(ctx *context) {
-	if ctx.params["id"] == "" {
+	id := ctx.params["id"]
+	if !bson.IsObjectIdHex(id) {
 		ss, err := lib.ListServer()
 		if err != nil {
 			ctx.Error(500, err)
@@ -17,6 +18,14 @@ func getServer(ctx *context) {
 		ctx.JSON(200, ss)
 		return
 	}
+
+	bid := bson.ObjectIdHex(id)
+	s, err := lib.GetServer(bid)
+	if err != nil {
+		ctx.Error(500, err)
+		return
+	}
+	ctx.JSON(200, s)
 }
 
 // DELETE /server?id=xxx

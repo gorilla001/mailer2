@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 
@@ -13,7 +14,8 @@ import (
 
 // GET /task?id=xxx
 func getTask(ctx *context) {
-	if ctx.params["id"] == "" {
+	id := ctx.params["id"]
+	if !bson.IsObjectIdHex(id) {
 		ts, err := lib.ListTask()
 		if err != nil {
 			ctx.Error(500, err)
@@ -26,6 +28,14 @@ func getTask(ctx *context) {
 		ctx.JSON(200, tws)
 		return
 	}
+
+	bid := bson.ObjectIdHex(id)
+	t, err := lib.GetTask(bid)
+	if err != nil {
+		ctx.Error(500, err)
+		return
+	}
+	ctx.JSON(200, lib.GetTaskWrapper(t))
 }
 
 // DELETE /task?id=xxx
@@ -98,4 +108,5 @@ func runTask(ctx *context) {
 
 // PATCH /task/stop?id=xxx
 func stopTask(ctx *context) {
+	ctx.Error(500, errors.New("not implement yet"))
 }

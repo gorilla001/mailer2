@@ -8,7 +8,8 @@ import (
 
 // GET /recipient?id=xxx
 func getRecipient(ctx *context) {
-	if ctx.params["id"] == "" {
+	id := ctx.params["id"]
+	if !bson.IsObjectIdHex(id) {
 		rs, err := lib.ListRecipient()
 		if err != nil {
 			ctx.Error(500, err)
@@ -17,6 +18,14 @@ func getRecipient(ctx *context) {
 		ctx.JSON(200, rs)
 		return
 	}
+
+	bid := bson.ObjectIdHex(id)
+	r, err := lib.GetRecipient(bid)
+	if err != nil {
+		ctx.Error(500, err)
+		return
+	}
+	ctx.JSON(200, r)
 }
 
 // DELETE /recipient?id=xxx
