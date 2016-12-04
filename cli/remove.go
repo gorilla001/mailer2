@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/urfave/cli"
@@ -19,11 +18,11 @@ func Remove(typ string, c *cli.Context) (err error) {
 		}
 	}()
 
-	id := c.String("id")
-	if !bson.IsObjectIdHex(id) {
-		return fmt.Errorf("(%s) not a valid bson id", id)
+	bid, err := bsonID(c)
+	if err != nil {
+		return err
 	}
-	bid := bson.ObjectIdHex(id)
+
 	switch typ {
 
 	case "server":

@@ -110,6 +110,13 @@ var (
 		},
 	}
 
+	showFlags = []cli.Flag{
+		cli.StringFlag{
+			Name:  "id",
+			Usage: "bson id of the to be shown object",
+		},
+	}
+
 	taskCreateFlags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "recipient",
@@ -242,7 +249,8 @@ func main() {
 			Subcommands: []cli.Command{
 				cli.Command{
 					Name:  "server",
-					Usage: "show smtp server configs",
+					Usage: "show smtp server",
+					Flags: showFlags,
 					Action: func(c *cli.Context) {
 						if err := mailercli.Show("server", c); err != nil {
 							log.Fatalln(err)
@@ -251,7 +259,8 @@ func main() {
 				},
 				cli.Command{
 					Name:  "recipient",
-					Usage: "show recipient list",
+					Usage: "show recipient",
+					Flags: showFlags,
 					Action: func(c *cli.Context) {
 						if err := mailercli.Show("recipient", c); err != nil {
 							log.Fatalln(err)
@@ -260,7 +269,8 @@ func main() {
 				},
 				cli.Command{
 					Name:  "mail",
-					Usage: "show mail list",
+					Usage: "show mail",
+					Flags: showFlags,
 					Action: func(c *cli.Context) {
 						if err := mailercli.Show("mail", c); err != nil {
 							log.Fatalln(err)

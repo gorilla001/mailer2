@@ -1,56 +1,71 @@
 package cli
 
 import (
-	"encoding/json"
-	"os"
-
 	"github.com/urfave/cli"
+	"gopkg.in/mgo.v2/bson"
 
 	"github.com/tinymailer/mailer/lib"
 )
 
 // Show is exported
 func Show(typ string, c *cli.Context) error {
+	bid, _ := bsonID(c)
+
 	switch typ {
 
 	case "server":
-		return showServer()
+		return showServer(bid)
 	case "recipient":
-		return showRecipient()
+		return showRecipient(bid)
 	case "mail":
-		return showMail()
+		return showMail(bid)
 	}
 
 	return nil
 }
 
-func pretty(data interface{}) error {
-	b, err := json.MarshalIndent(data, "", "    ")
-	if err != nil {
-		return err
+func showServer(id bson.ObjectId) error {
+	var (
+		ss  interface{}
+		err error
+	)
+	if id.Valid() {
+		ss, err = lib.GetServer(id)
+	} else {
+		ss, err = lib.ListServer()
 	}
-	_, err = os.Stdout.Write(append(b, '\n'))
-	return err
-}
-
-func showServer() error {
-	ss, err := lib.ListServer()
 	if err != nil {
 		return err
 	}
 	return pretty(ss)
 }
 
-func showRecipient() error {
-	rs, err := lib.ListRecipient()
+func showRecipient(id bson.ObjectId) error {
+	var (
+		rs  interface{}
+		err error
+	)
+	if id.Valid() {
+		rs, err = lib.GetRecipient(id)
+	} else {
+		rs, err = lib.ListRecipient()
+	}
 	if err != nil {
 		return err
 	}
 	return pretty(rs)
 }
 
-func showMail() error {
-	ms, err := lib.ListMail()
+func showMail(id bson.ObjectId) error {
+	var (
+		ms  interface{}
+		err error
+	)
+	if id.Valid() {
+		ms, err = lib.GetMail(id)
+	} else {
+		ms, err = lib.ListMail()
+	}
 	if err != nil {
 		return err
 	}

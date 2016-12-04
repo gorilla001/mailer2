@@ -39,7 +39,8 @@ func Task(typ string, c *cli.Context) error {
 		return runTask(bid)
 
 	case "show":
-		return showTask()
+		bid, _ := bsonID(c)
+		return showTask(bid)
 
 	case "follow":
 		bid, err := bsonID(c)
@@ -116,7 +117,15 @@ func runTask(id bson.ObjectId) error {
 	return nil
 }
 
-func showTask() error {
+func showTask(id bson.ObjectId) error {
+	if id.Valid() {
+		t, err := lib.GetTask(id)
+		if err != nil {
+			return err
+		}
+		return pretty(lib.GetTaskWrapper(t))
+	}
+
 	ts, err := lib.ListTask()
 	if err != nil {
 		return err
@@ -129,11 +138,11 @@ func showTask() error {
 }
 
 func followTask(id bson.ObjectId) error {
-	return nil
+	return errors.New("not implement yet")
 }
 
 func stopTask(id bson.ObjectId) error {
-	return nil
+	return errors.New("not implement yet")
 }
 
 func rmTask(id bson.ObjectId) error {
@@ -145,12 +154,4 @@ func rmTask(id bson.ObjectId) error {
 	}
 	os.Stdout.WriteString("+OK\r\n")
 	return nil
-}
-
-func bsonID(c *cli.Context) (bson.ObjectId, error) {
-	id := c.String("id")
-	if !bson.IsObjectIdHex(id) {
-		return "", fmt.Errorf("invalid bson id %s", id)
-	}
-	return bson.ObjectIdHex(id), nil
 }
