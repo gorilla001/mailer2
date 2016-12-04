@@ -66,6 +66,7 @@ func NewMailEntry(mail *Mail, from, to, helo string, server *SMTPServer) *MailEn
 // SwitchServer switch to a new smtp server while retrying failed delivery
 func (e *MailEntry) SwitchServer(s *SMTPServer) {
 	e.Server = s
+	e.From = s.AuthUser
 }
 
 // MailContent generate the whole mail content to be deliveried

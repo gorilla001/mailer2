@@ -148,7 +148,7 @@ func RunTask(task *types.Task, policy *types.SendPolicy) io.ReadCloser {
 					var (
 						err      error
 						server   = sg.next()
-						fromUser = server.AuthUser
+						fromUser = server.AuthUser // we use smtp auth user as smtp session <FROM> user
 						startAt  = time.Now()
 						detail   = map[string]interface{}{
 							"mail_to":      mailTo,
@@ -156,6 +156,7 @@ func RunTask(task *types.Task, policy *types.SendPolicy) io.ReadCloser {
 							"smtp_server":  server.ID.Hex(),
 							"start_at":     startAt,
 							"server_ranks": sg.stats(),
+							"finished":     false,
 						}
 					)
 
@@ -163,11 +164,13 @@ func RunTask(task *types.Task, policy *types.SendPolicy) io.ReadCloser {
 					defer func() {
 						var nsucc, nfail int
 						detail["time_elapsed"] = time.Now().Sub(startAt).String()
+						detail["finished"] = true
 						counter.Lock()
 						if err != nil {
 							counter.fail++
 							detail["error"] = err.Error()
 						} else {
+							delete(detail, "error")
 							counter.succ++
 						}
 						nsucc, nfail = counter.succ, counter.fail
@@ -197,10 +200,23 @@ func RunTask(task *types.Task, policy *types.SendPolicy) io.ReadCloser {
 						sg.downgrade(server.ID)
 					}
 
+					detail["error"] = err.Error()
+					sender.Encode(types.TaskProgressMsg{
+						Detail: detail,
+					})
+
 					// switch server and retry
 					// note: we don't upgrade/downgrae on smtp server while retry
 					for i := uint(1); i <= policy.MaxRetry; i++ {
-						mailEntry.SwitchServer(sg.next())
+						newServer := sg.next()
+						mailEntry.SwitchServer(newServer)
+
+						detail["retry_n"] = i
+						detail["smtp_server"] = newServer.ID.Hex()
+						sender.Encode(types.TaskProgressMsg{
+							Detail: detail,
+						})
+
 						err = smtp.SendEmail(mailEntry)
 						if err == nil {
 							break

@@ -11,7 +11,7 @@ var (
 	// DefaultSendPolicy is exported
 	DefaultSendPolicy = &SendPolicy{
 		MaxConcurrency: 3,
-		MaxRetry:       0,
+		MaxRetry:       1,
 		WaitDelay:      10,
 	}
 )

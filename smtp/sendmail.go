@@ -3,7 +3,9 @@ package smtp
 import (
 	"fmt"
 	"io"
+	"net"
 	"net/smtp"
+	"time"
 
 	"github.com/tinymailer/mailer/types"
 )
@@ -35,6 +37,7 @@ func SendEmail(e *types.MailEntry) (err error) {
 		helo       = "localhost"
 		client     *smtp.Client
 		w          io.WriteCloser
+		conn       net.Conn
 	)
 
 	defer func() {
@@ -49,9 +52,14 @@ func SendEmail(e *types.MailEntry) (err error) {
 		return
 	}
 
-	// dial
+	// dial with timeout
 	SMTPAction = "dial"
-	if client, err = smtp.Dial(e.Server.HostAddr()); err != nil {
+	conn, err = net.DialTimeout("tcp", e.Server.HostAddr(), time.Second*10)
+	if err != nil {
+		return
+	}
+	client, err = smtp.NewClient(conn, e.Server.Host)
+	if err != nil {
 		return
 	}
 
