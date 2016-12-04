@@ -1,5 +1,5 @@
-  - [ ] minimal usable design
-  - [ ] cli
+  - [x] minimal usable design
+  - [x] cli
   - [x] vendor system
   - [x] Dockerfile for bulid
   - [x] Dockerfile for product
@@ -15,7 +15,7 @@
   - [x] run send task with progress ouptut
   - [ ] smtp auth ping on prepare, sort by speed
   - [ ] task audit log, dispatch stream log
-  - [ ] check if connected on resource removal
+  - [ ] check if related on resource removal
   - [ ] complete http api
   - [ ] http mux package support path params
   - [ ] http mux package support subdirectory & directory midware
